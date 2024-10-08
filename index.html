@@ -271,23 +271,23 @@ const sheetNames = {
 
 // Company logos mapping
 const companyLogos = {
-    "ABNB": "/logos/ABNB_logo.png",
-    "BKNG": "/logos/BKNG_logo.png",
-    "EXPE": "/logos/EXPE_logo.png",
-    "TCOM": "/logos/TCOM_logo.png",
-    "TRIP": "/logos/TRIP_logo.png",
-    "TRVG": "/logos/TRVG_logo.png",
-    "EDR": "/logos/EDR_logo.png",
-    "DESP": "/logos/DESP_logo.png",
-    "MMYT": "/logos/MMYT_logo.png",
-    "Ixigo": "/logos/IXIGO_logo.png",
-    "SEERA": "/logos/SEERA_logo.png",
-    "Webjet": "/logos/WEB_logo.png",
-    "LMN": "/logos/LMN_logo.png",
-    "Yatra": "/logos/YTRA_logo.png",
-    "Orbitz": "/logos/OWW_logo.png",
-    "Travelocity": "/logos/Travelocity_logo.png",
-    "EaseMyTrip": "/logos/EASEMYTRIP_logo.png",
+    "ABNB": "logos/ABNB_logo.png",
+    "BKNG": "logos/BKNG_logo.png",
+    "EXPE": "logos/EXPE_logo.png",
+    "TCOM": "logos/TCOM_logo.png",
+    "TRIP": "logos/TRIP_logo.png",
+    "TRVG": "logos/TRVG_logo.png",
+    "EDR": "logos/EDR_logo.png",
+    "DESP": "logos/DESP_logo.png",
+    "MMYT": "logos/MMYT_logo.png",
+    "Ixigo": "logos/IXIGO_logo.png",
+    "SEERA": "logos/SEERA_logo.png",
+    "Webjet": "logos/WEB_logo.png",
+    "LMN": "logos/LMN_logo.png",
+    "Yatra": "logos/YTRA_logo.png",
+    "Orbitz": "logos/OWW_logo.png",
+    "Travelocity": "logos/Travelocity_logo.png",
+    "EaseMyTrip": "logos/EASEMYTRIP_logo.png",
     // Add other company logos here...
 };
 
@@ -611,8 +611,8 @@ function updateBubbleChart(quarter, sheetData) {
     // Define the layout with images
     const layout = {
         title: `Revenue Growth vs EBITDA Margin for ${quarter}`,
-        xaxis: { title: 'EBITDA Margin (%)', range: [-50, 50], gridcolor: '#eee' },
-        yaxis: { title: 'Revenue Growth (%)', range: [-30, 100], gridcolor: '#eee' },
+        xaxis: { title: 'EBITDA Margin TTM (%)', range: [-50, 50], gridcolor: '#eee' },
+        yaxis: { title: 'Revenue Growth TTM (%)', range: [-30, 100], gridcolor: '#eee' },
         margin: { t: 60, l: 80, r: 80, b: 60 },
         images: images,
         showlegend: false,
