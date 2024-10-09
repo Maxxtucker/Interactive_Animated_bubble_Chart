@@ -350,8 +350,8 @@ function updateBubbleChart(quarter, sheetData) {
     // Define the layout with images
     const layout = {
         title: `Revenue Growth vs EBITDA Margin for ${quarter}`,
-        xaxis: { title: 'EBITDA Margin TTM (%)', range: [-50, 50], gridcolor: '#eee' },
-        yaxis: { title: 'Revenue Growth TTM (%)', range: [-30, 100], gridcolor: '#eee' },
+        xaxis: { title: 'EBITDA Margin TTM (%)', range: [-60, 60], gridcolor: '#eee' },
+        yaxis: { title: 'Revenue Growth TTM (%)', range: [-40, 110], gridcolor: '#eee' },
         margin: { t: 60, l: 80, r: 80, b: 60 },
         images: images,
         showlegend: false,
@@ -362,97 +362,101 @@ function updateBubbleChart(quarter, sheetData) {
     Plotly.react('bubble-chart', bubbleData, layout, {responsive: true});
 }
 
-
-// Function to update the racing bar chart using D3.js
 function updateBarChart(quarter, sheetData) {
+    // Fixed dimensions and configurations
+    const fixedBarHeight = 30; // Fixed height for each bar
+    const barPadding = 10; // Padding between bars
+    const maxChartHeight = 600; // Optional: Maximum height before enabling scroll
+    const margin = { top: 30, right: 20, bottom: 50, left: 100 };
+
     // Filter data for the selected quarter and selected companies
-    const quarterData = sheetData.filter(d => d.quarter === quarter && selectedCompanies.includes(d.company))
+    const quarterData = sheetData
+        .filter(d => d.quarter === quarter && selectedCompanies.includes(d.company))
         .sort((a, b) => b.revenue - a.revenue);
 
-    // If SVG doesn't exist, create it
-    let svg = d3.select("#bar-chart").select("svg");
+    const numberOfCompanies = quarterData.length;
+
+    // Calculate the required height based on the number of companies
+    const calculatedHeight = margin.top + margin.bottom + numberOfCompanies * (fixedBarHeight + barPadding);
+
+    // Optional: Limit the chart height and enable scrolling
+    const chartHeight = Math.min(calculatedHeight, maxChartHeight);
+    const isScrollable = calculatedHeight > maxChartHeight;
+
+    // Select the chart container
+    const chartContainer = d3.select("#bar-chart");
+
+    // Adjust the container's height and enable scrolling if necessary
+    chartContainer
+        .style("height", `${chartHeight}px`)
+        .style("overflow-y", isScrollable ? "auto" : "hidden");
+
+    // Select or create the SVG with the calculated height
+    let svg = chartContainer.select("svg");
     if (svg.empty()) {
-        const width = document.getElementById('bar-chart').clientWidth;
-        const height = document.getElementById('bar-chart').clientHeight;
-        const margin = { top: 30, right: 20, bottom: 50, left: 150 };
+        const width = chartContainer.node().clientWidth;
 
-        svg = d3.select("#bar-chart").append("svg")
+        svg = chartContainer.append("svg")
             .attr("width", width)
-            .attr("height", height);
+            .attr("height", calculatedHeight); // Set height based on data
 
-        svg.append("g").attr("class", "x-axis");
         svg.append("g").attr("class", "y-axis");
-        
-        // Append a group for bar labels
         svg.append("g").attr("class", "bar-labels");
 
-        // Make the bar chart responsive on window resize
+        // Make the bar chart responsive in width on window resize
         window.addEventListener('resize', () => {
-            const newWidth = document.getElementById('bar-chart').clientWidth;
-            const newHeight = document.getElementById('bar-chart').clientHeight;
-            svg.attr("width", newWidth).attr("height", newHeight);
+            const newWidth = chartContainer.node().clientWidth;
+            svg.attr("width", newWidth);
 
-            // Update scales and axes
-            const updatedX = d3.scaleLinear()
-                .domain([0, maxRevenueValue])
-                .range([margin.left, newWidth - margin.right]);
+            // Update the x-scale range
+            x.range([margin.left, newWidth - margin.right]);
 
-            const updatedY = d3.scaleBand()
-                .domain(quarterData.map(d => d.company))
-                .range([margin.top, newHeight - margin.bottom])
-                .padding(0.1);
-
+            // Update the x-axis
             svg.select(".x-axis")
-                .attr("transform", `translate(0,${newHeight - margin.bottom})`)
-                .call(d3.axisBottom(updatedX).ticks(5).tickFormat(d3.format("$.2s")));
-
-            svg.select(".y-axis")
-                .attr("transform", `translate(${margin.left},0)`)
-                .call(d3.axisLeft(updatedY));
+                .attr("transform", `translate(0,${chartHeight - margin.bottom})`)
+                .call(d3.axisBottom(x).ticks(5).tickFormat(d3.format("$.2s")));
 
             // Update bars
             svg.selectAll(".bar")
-                .attr("x", updatedX(0))
-                .attr("y", d => updatedY(d.company))
-                .attr("height", updatedY.bandwidth())
-                .attr("width", d => updatedX(d.revenue) - updatedX(0));
+                .attr("width", d => x(d.revenue) - x(0));
 
             // Update labels
             svg.selectAll(".bar-label")
-                .attr("x", d => updatedX(d.revenue) + 5)
-                .attr("y", d => updatedY(d.company) + updatedY.bandwidth() / 2);
+                .attr("x", d => x(d.revenue) + 5);
         });
+    } else {
+        svg.attr("height", calculatedHeight);
     }
 
     const width = parseInt(svg.attr("width"));
     const height = parseInt(svg.attr("height"));
-    const margin = { top: 30, right: 20, bottom: 50, left: 65 };
 
-    // Use the precomputed maximum revenue value for the x-axis domain
+    // Define the x-scale (fixed based on maxRevenueValue)
     const x = d3.scaleLinear()
         .domain([0, maxRevenueValue])
         .range([margin.left, width - margin.right]);
 
+    // Define the y-scale with fixed bar heights
     const y = d3.scaleBand()
         .domain(quarterData.map(d => d.company))
-        .range([margin.top, height - margin.bottom])
+        .range([margin.top, margin.top + numberOfCompanies * (fixedBarHeight + barPadding)])
         .padding(0.1);
 
-    // svg.select(".x-axis")
-    //     .attr("transform", `translate(0,${height - margin.bottom})`)
-    //     .transition()
-    //     .duration(500)
-    //     .call(d3.axisBottom(x).ticks(5).tickFormat(d3.format("$.2s")))
-    //     .selectAll("text")
-    //     .attr("transform", "rotate(-45)")
-    //     .style("text-anchor", "end");
+    // Update the x-axis
+    svg.select(".x-axis")
+        .attr("transform", `translate(0,${height - margin.bottom})`)
+        .transition()
+        .duration(500)
+        .call(d3.axisBottom(x).ticks(5).tickFormat(d3.format("$.2s")));
 
+    // Update the y-axis
     svg.select(".y-axis")
         .attr("transform", `translate(${margin.left},0)`)
         .transition()
         .duration(500)
         .call(d3.axisLeft(y));
 
+    // Bind data to bars
     const bars = svg.selectAll(".bar")
         .data(quarterData, d => d.company);
 
@@ -463,7 +467,7 @@ function updateBarChart(quarter, sheetData) {
         .attr("y", d => y(d.company))
         .attr("height", y.bandwidth())
         .attr("width", d => x(d.revenue) - x(0))
-        .style("fill", d => color_dict[d.company] || '#2E86C1'); // Assign colors based on color_dict
+        .style("fill", d => color_dict[d.company] || '#2E86C1');
 
     // Enter new bars
     bars.enter().append("rect")
@@ -472,7 +476,7 @@ function updateBarChart(quarter, sheetData) {
         .attr("y", d => y(d.company))
         .attr("height", y.bandwidth())
         .attr("width", d => x(d.revenue) - x(0))
-        .style("fill", d => color_dict[d.company] || '#2E86C1') // Assign colors based on color_dict
+        .style("fill", d => color_dict[d.company] || '#2E86C1')
         .on("mouseover", function(event, d) {
             d3.select(this).style("fill", d3.rgb(color_dict[d.company] || '#2E86C1').darker(1));
             showTooltip(event, `${d.company}<br>Revenue: $${d3.format(",")(d.revenue)}M`);
@@ -493,7 +497,7 @@ function updateBarChart(quarter, sheetData) {
         .remove();
 
     // ----- Adding Revenue Labels -----
-    
+
     // Select all labels and bind data
     const labels = svg.selectAll(".bar-label")
         .data(quarterData, d => d.company);
@@ -531,6 +535,7 @@ function updateBarChart(quarter, sheetData) {
             hideTooltip();
         });
 }
+
 
 // Function to handle the Play/Pause button
 function handlePlayPause() {
