@@ -27,6 +27,17 @@ const companyLogos = {
     "Orbitz": "logos/OWW_logo.png",
     "Travelocity": "logos/Travelocity_logo.png",
     "EaseMyTrip": "logos/EASEMYTRIP_logo.png",
+    "Wego":  "logos/Wego_logo.png",
+    "Skyscanner":  "logos/Skyscanner_logo.png",
+    "Etraveli":  "logos/Etraveli_logo.png",
+    "Kiwi":  "logos/Kiwi_logo.png",
+    "Cleartrip": "logos/Cleartrip_logo.png",
+    "Traveloka": "logos/Traveloka_logo.png",
+    "FLT": "logos/FlightCentre_logo.png",
+    "Almosafer": "logos/Almosafer_logo.png",
+    "Webjet OTA": "logos/OTA_logo.png",
+
+
     // Add other company logos here...
 };
 
@@ -37,7 +48,7 @@ const color_dict_raw = {
     'BKNG': '#003480',
     'DESP': '#755bd8',
     'EXPE': '#fbcc33',
-    'EASEMYTRIP': '#00a0e2',
+    'EaseMyTrip': '#00a0e2',
     'Ixigo': '#e74c3c',
     'MMYT': '#e74c3c',
     'TRIP': '#00af87',
@@ -52,7 +63,47 @@ const color_dict_raw = {
     'PCLN': '#003480',
     'Orbitz': '#8edbfa',
     'Travelocity': '#1d3e5c',
+    'Skyscanner': '#0770e3',
+    'Etraveli': '#b2e9ff',
+    'Kiwi': '#e5fdd4',
+    'Cleartrip': '#e74c3c',
+    'Traveloka': '#38a0e2',
+    'FLT': '#d2b6a8',
+    'Almosafer': '#ba0d86',
+    'Webjet OTA': '#e74c3c',
+    
 };
+
+// Mapping of company symbols to full names
+const companyNames = {
+    "ABNB": "Airbnb",
+    "BKNG": "Booking.com",
+    "EXPE": "Expedia",
+    "TCOM": "Trip.com",
+    "TRIP": "TripAdvisor",
+    "TRVG": "Trivago",
+    "EDR": "Edream",
+    "DESP": "despegar",
+    "MMYT": "Making My Trip",
+    "Ixigo": "Ixigo",
+    "SEERA": "Seera Group",
+    "Webjet": "Webjet",
+    "LMN": "Lastminute",
+    "Yatra": "Yatra.com",
+    "Orbitz": "Orbitz",
+    "Travelocity": "Travelocity",
+    "EaseMyTrip": "EaseMyTrip",
+    "Wego": "Wego",
+    "Skyscanner": "Skyscanner",
+    "Etraveli": "Etraveli",
+    "Kiwi": "Kiwi",
+    "Cleartrip": "Cleartrip",
+    "FLT": "Flight Centre",
+    "Almosafer": "Almosafer",
+
+    // Add more mappings as needed...
+};
+
 
 // Function to clean the color dictionary by trimming keys
 function cleanColorDict(rawDict) {
@@ -152,6 +203,7 @@ let yearIndices;
 let selectedCompanies = []; // Initialize empty, will be set later
 
 // Function to initialize company filters
+
 function initializeCompanyFilters(sheetData) {
     const companies = [...new Set(sheetData.map(d => d.company))].sort();
     const filterContainer = d3.select("#company-filters");
@@ -159,30 +211,37 @@ function initializeCompanyFilters(sheetData) {
     // Clear any existing filters
     filterContainer.html('');
 
-    companies.forEach(company => {
-        const id = `filter-${company}`;
+    companies.forEach(companySymbol => {
+        const id = `filter-${companySymbol}`;
+        const companyName = companyNames[companySymbol] || companySymbol; // Fallback to symbol if name not found
 
-        const label = filterContainer.append("label").attr("for", id);
+        const label = filterContainer.append("label")
+            .attr("for", id)
+            .style("display", "flex")
+            .style("align-items", "center")
+            .style("margin-bottom", "5px"); // Optional: spacing between labels
+
         label.append("input")
             .attr("type", "checkbox")
             .attr("id", id)
-            .attr("value", company)
+            .attr("value", companySymbol)
             .property("checked", true) // Initially all checked
             .on("change", handleFilterChange);
-        label.append("span").text(company);
+
+        label.append("span")
+            .html(`${companySymbol} - ${companyName}`); // Display symbol and name
     });
 
     // Initialize selectedCompanies with all companies
     selectedCompanies = companies;
 }
 
-// Function to handle filter changes
-function handleFilterChange() {
-    const searchTerm = d3.select("#search-input").property("value").toLowerCase();
 
+// Function to handle filter changes (only based on checkbox state)
+function handleFilterChange() {
     const checkedBoxes = d3.selectAll("#company-filters input[type='checkbox']")
         .nodes()
-        .filter(d => d.checked && d.value.toLowerCase().includes(searchTerm))
+        .filter(d => d.checked)
         .map(d => d.value);
 
     selectedCompanies = checkedBoxes;
@@ -197,6 +256,7 @@ function handleFilterChange() {
     updateBubbleChart(selectedQuarter, mergedData);
     updateBarChart(selectedQuarter, mergedData);
 }
+
 
 // Function to create the interactive timeline using D3.js
 function createTimeline(quarters, mergedData, yearIndices, uniqueYears) {
@@ -594,15 +654,49 @@ function hideTooltip() {
         .style("opacity", 0);
 }
 
-// Search Functionality for Filters
-d3.select("#search-input").on("input", function() {
-    const searchTerm = this.value.toLowerCase();
+// Debounce Function to limit the rate of function execution
+function debounce(func, delay) {
+    let timeout;
+    return function(...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), delay);
+    };
+}
+
+// Enhanced Search Functionality with Debounce and Highlighting
+d3.select("#search-input").on("input", debounce(function() {
+    const searchTerm = this.value.trim().toLowerCase();
+
     d3.selectAll("#company-filters label")
-        .style("display", d => {
-            const company = d3.select(d).select("input").attr("value").toLowerCase();
-            return company.includes(searchTerm) ? "flex" : "none";
+        .style("display", function() {
+            const companySymbol = d3.select(this).select("input").attr("value");
+            const companyName = companyNames[companySymbol] || companySymbol;
+
+            // Check if either symbol or name includes the search term
+            const symbolMatch = companySymbol.toLowerCase().includes(searchTerm);
+            const nameMatch = companyName.toLowerCase().includes(searchTerm);
+
+            if (symbolMatch || nameMatch) {
+                // Highlight matching parts
+                let displayText = `${companySymbol} - ${companyName}`;
+
+                if (searchTerm !== "") {
+                    const regex = new RegExp(`(${searchTerm})`, 'gi');
+                    displayText = displayText.replace(regex, '<span class="highlight">$1</span>');
+                }
+
+                d3.select(this).select("span").html(displayText);
+                return "flex";
+            } else {
+                // Remove any existing highlights and hide the label
+                d3.select(this).select("span").html(`${companySymbol} - ${companyName}`);
+                return "none";
+            }
         });
-});
+}, 300)); // 300ms delay
+
+
 
 // Select All and Deselect All Button Functions
 d3.select("#select-all").on("click", () => {
