@@ -8,6 +8,10 @@ const sheetNames = {
     revenue: 'REVENUE'
 };
 
+// Array of company symbols to be selected by default
+const defaultSelectedCompanies = ["Almosafer", "Cleartrip", "EaseMyTrip", "Ixigo", "MMYT", "Skyscanner", "Wego", "Yatra"];
+
+
 // Company logos mapping
 const companyLogos = {
     "ABNB": "logos/ABNB_logo.png",
@@ -204,6 +208,7 @@ let selectedCompanies = []; // Initialize empty, will be set later
 
 // Function to initialize company filters
 
+// Function to initialize company filters with default selections
 function initializeCompanyFilters(sheetData) {
     const companies = [...new Set(sheetData.map(d => d.company))].sort();
     const filterContainer = d3.select("#company-filters");
@@ -225,16 +230,19 @@ function initializeCompanyFilters(sheetData) {
             .attr("type", "checkbox")
             .attr("id", id)
             .attr("value", companySymbol)
-            .property("checked", true) // Initially all checked
+            .property("checked", defaultSelectedCompanies.includes(companySymbol)) // Set based on default list
             .on("change", handleFilterChange);
 
         label.append("span")
             .html(`${companySymbol} - ${companyName}`); // Display symbol and name
     });
 
-    // Initialize selectedCompanies with all companies
-    selectedCompanies = companies;
+    // Initialize selectedCompanies based on defaultSelectedCompanies
+    selectedCompanies = sheetData
+        .filter(d => defaultSelectedCompanies.includes(d.company))
+        .map(d => d.company);
 }
+
 
 
 // Function to handle filter changes (only based on checkbox state)
