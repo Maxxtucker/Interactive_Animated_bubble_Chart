@@ -1,11 +1,11 @@
 // Your Google Sheets ID
-const sheetId = '1XbkqyHqOWgcpZiScJIJDdPYyOJO1HaD1geFokMjC_ug';
+const sheetId = '1DJS2ScQ7WrPQhFTbnJI9ovyYnxHfSFG25X75gR9a2Wc';
 
 // Sheet names for each table (Revenue Growth, EBITDA Margin, Revenue)
 const sheetNames = {
-    revenueGrowth: 'REVENUE GROWTH',
-    ebitdaMargin: 'EBITDA MARGIN',
-    revenue: 'REVENUE'
+    revenueGrowth: 'Revenue Growth YoY',
+    ebitdaMargin: 'EBITDA_MARGIN',
+    revenue: 'Revenue'
 };
 
 // Array of company symbols to be selected by default
@@ -206,8 +206,6 @@ let uniqueYears;
 let yearIndices;
 let selectedCompanies = []; // Initialize empty, will be set later
 
-// Function to initialize company filters
-
 // Function to initialize company filters with default selections
 function initializeCompanyFilters(sheetData) {
     const companies = [...new Set(sheetData.map(d => d.company))].sort();
@@ -379,8 +377,8 @@ function updateBubbleChart(quarter, sheetData) {
 
     // Prepare the bubble data
     const bubbleData = [{
-        x: quarterData.map(d => d.ebitdaMargin),
-        y: quarterData.map(d => d.revenueGrowth),
+        x: quarterData.map(d => Math.min(Math.max(d.ebitdaMargin, -55), 55)),  // Cap EBITDA Margin for display
+        y: quarterData.map(d => Math.min(Math.max(d.revenueGrowth, -35), 95)), // Cap Revenue Growth for display
         text: quarterData.map(d => d.company),
         mode: 'markers',
         marker: {
@@ -403,132 +401,140 @@ function updateBubbleChart(quarter, sheetData) {
             source: logoPath,
             xref: 'x',
             yref: 'y',
-            x: d.ebitdaMargin,
-            y: d.revenueGrowth + 4, // Offset y to position the logo above the bubble
+            x: Math.min(Math.max(d.ebitdaMargin, -55), 55),  // Adjust to capped EBITDA Margin
+            y: Math.min(Math.max(d.revenueGrowth, -35), 95) + 5, // Adjust to capped Revenue Growth
             sizex: 10,
             sizey: 10,
             xanchor: 'center',
             yanchor: 'bottom',
             layer: 'above',
             sizing: 'contain', // Ensure the entire logo fits within the specified size
-            opacity: 0.8
+            opacity: 1
         };
     }).filter(img => img !== null); // Remove nulls
 
     // Define the layout with images
     const layout = {
         title: `Revenue Growth vs EBITDA Margin for ${quarter}`,
-        xaxis: { title: 'EBITDA Margin TTM (%)', range: [-60, 60], gridcolor: '#eee' },
-        yaxis: { title: 'Revenue Growth TTM (%)', range: [-40, 110], gridcolor: '#eee' },
-        margin: { t: 60, l: 80, r: 80, b: 60 },
+        xaxis: { title: 'EBITDA Margin (%)', range: [-60, 60], gridcolor: '#eee' },
+        yaxis: { title: 'Revenue Growth YoY (%)', range: [-40, 110], gridcolor: '#eee' },
+        margin: { t: 60, l: 80, r: 80, b: 80 },
         images: images,
         showlegend: false,
-        hovermode: 'closest'
+        hovermode: 'closest',
+        annotations: [
+            {
+                xref: 'paper',
+                yref: 'paper',
+                x: -0.1,  // Position at bottom left corner
+                y: -0.18,  // Position at bottom left corner
+                xanchor: 'left',
+                yanchor: 'bottom',
+                text: "Note: Extreme values are capped for display: revenue growth between -30% and +100%, and EBITDA margin within ±50%.",
+                showarrow: false,
+                font: {
+                    size: 12,
+                    color: 'gray'
+                }
+            }
+        ]
     };
 
     // Render the bubble chart with images
     Plotly.react('bubble-chart', bubbleData, layout, {responsive: true});
 }
 
+
 function updateBarChart(quarter, sheetData) {
-    // Fixed dimensions and configurations
     const fixedBarHeight = 30; // Fixed height for each bar
     const barPadding = 10; // Padding between bars
     const maxChartHeight = 600; // Optional: Maximum height before enabling scroll
     const margin = { top: 30, right: 20, bottom: 50, left: 100 };
 
-    // Filter data for the selected quarter and selected companies
     const quarterData = sheetData
         .filter(d => d.quarter === quarter && selectedCompanies.includes(d.company))
         .sort((a, b) => b.revenue - a.revenue);
 
     const numberOfCompanies = quarterData.length;
-
-    // Calculate the required height based on the number of companies
     const calculatedHeight = margin.top + margin.bottom + numberOfCompanies * (fixedBarHeight + barPadding);
-
-    // Optional: Limit the chart height and enable scrolling
     const chartHeight = Math.min(calculatedHeight, maxChartHeight);
     const isScrollable = calculatedHeight > maxChartHeight;
 
-    // Select the chart container
     const chartContainer = d3.select("#bar-chart");
-
-    // Adjust the container's height and enable scrolling if necessary
     chartContainer
         .style("height", `${chartHeight}px`)
         .style("overflow-y", isScrollable ? "auto" : "hidden");
 
-    // Select or create the SVG with the calculated height
     let svg = chartContainer.select("svg");
     if (svg.empty()) {
         const width = chartContainer.node().clientWidth;
 
         svg = chartContainer.append("svg")
             .attr("width", width)
-            .attr("height", calculatedHeight); // Set height based on data
+            .attr("height", calculatedHeight); 
 
         svg.append("g").attr("class", "y-axis");
         svg.append("g").attr("class", "bar-labels");
 
-        // Make the bar chart responsive in width on window resize
+        // Add title to the bar chart
+        svg.append("text")
+            .attr("x", width / 2)
+            .attr("y", margin.top / 2)
+            .attr("text-anchor", "middle")
+            .attr("class", "chart-title")
+            .style("font-size", "16px")
+            .text(`Revenue for ${quarter}`);  // Dynamic title with the selected quarter
+
         window.addEventListener('resize', () => {
             const newWidth = chartContainer.node().clientWidth;
             svg.attr("width", newWidth);
-
-            // Update the x-scale range
             x.range([margin.left, newWidth - margin.right]);
 
-            // Update the x-axis
             svg.select(".x-axis")
                 .attr("transform", `translate(0,${chartHeight - margin.bottom})`)
                 .call(d3.axisBottom(x).ticks(5).tickFormat(d3.format("$.2s")));
 
-            // Update bars
             svg.selectAll(".bar")
                 .attr("width", d => x(d.revenue) - x(0));
-
-            // Update labels
             svg.selectAll(".bar-label")
                 .attr("x", d => x(d.revenue) + 5);
+
+            // Reposition title on resize
+            svg.select(".chart-title")
+                .attr("x", newWidth / 2);
         });
     } else {
         svg.attr("height", calculatedHeight);
+        svg.select(".chart-title").text(`Revenue for ${quarter}`);
     }
 
     const width = parseInt(svg.attr("width"));
     const height = parseInt(svg.attr("height"));
 
-    // Define the x-scale (fixed based on maxRevenueValue)
     const x = d3.scaleLinear()
         .domain([0, maxRevenueValue])
         .range([margin.left, width - margin.right]);
 
-    // Define the y-scale with fixed bar heights
     const y = d3.scaleBand()
         .domain(quarterData.map(d => d.company))
         .range([margin.top, margin.top + numberOfCompanies * (fixedBarHeight + barPadding)])
         .padding(0.1);
 
-    // Update the x-axis
     svg.select(".x-axis")
         .attr("transform", `translate(0,${height - margin.bottom})`)
         .transition()
         .duration(500)
         .call(d3.axisBottom(x).ticks(5).tickFormat(d3.format("$.2s")));
 
-    // Update the y-axis
     svg.select(".y-axis")
         .attr("transform", `translate(${margin.left},0)`)
         .transition()
         .duration(500)
         .call(d3.axisLeft(y));
 
-    // Bind data to bars
     const bars = svg.selectAll(".bar")
         .data(quarterData, d => d.company);
 
-    // Update existing bars
     bars.transition()
         .duration(500)
         .attr("x", x(0))
@@ -537,7 +543,6 @@ function updateBarChart(quarter, sheetData) {
         .attr("width", d => x(d.revenue) - x(0))
         .style("fill", d => color_dict[d.company] || '#2E86C1');
 
-    // Enter new bars
     bars.enter().append("rect")
         .attr("class", "bar")
         .attr("x", x(0))
@@ -557,41 +562,34 @@ function updateBarChart(quarter, sheetData) {
             hideTooltip();
         });
 
-    // Remove old bars
     bars.exit()
         .transition()
         .duration(500)
         .attr("width", 0)
         .remove();
 
-    // ----- Adding Revenue Labels -----
-
-    // Select all labels and bind data
     const labels = svg.selectAll(".bar-label")
         .data(quarterData, d => d.company);
 
-    // Remove old labels
     labels.exit()
         .transition()
         .duration(500)
         .attr("x", x(0))
         .remove();
 
-    // Update existing labels
     labels.transition()
         .duration(500)
-        .attr("x", d => x(d.revenue) + 5) // Position label 5px to the right of the bar
+        .attr("x", d => x(d.revenue) + 5)
         .attr("y", d => y(d.company) + y.bandwidth() / 2)
         .text(d => d3.format("$.2s")(d.revenue));
 
-    // Enter new labels
     labels.enter().append("text")
         .attr("class", "bar-label")
-        .attr("x", d => x(d.revenue) + 5) // Position label 5px to the right of the bar
+        .attr("x", d => x(d.revenue) + 5)
         .attr("y", d => y(d.company) + y.bandwidth() / 2)
-        .attr("dy", ".35em") // Vertically center the text
+        .attr("dy", ".35em")
         .attr("font-size", "12px")
-        .attr("fill", "black") // Text color; adjust if needed
+        .attr("fill", "black")
         .text(d => d3.format("$.2s")(d.revenue))
         .on("mouseover", function(event, d) {
             showTooltip(event, `${d.company}<br>Revenue: $${d3.format(",")(d.revenue)}M`);
@@ -603,6 +601,7 @@ function updateBarChart(quarter, sheetData) {
             hideTooltip();
         });
 }
+
 
 
 // Function to handle the Play/Pause button
@@ -760,7 +759,6 @@ Promise.all([
 ]).then(([revenueGrowthData, ebitdaMarginData, revenueData]) => {
     mergedData = mergeData(revenueGrowthData, ebitdaMarginData, revenueData);
     uniqueQuarters = [...new Set(mergedData.map(d => d.quarter))].sort(); // Ensure chronological order
-    console.log("Unique Quarters after merge:", uniqueQuarters);
 
     if (uniqueQuarters.length === 0) {
         console.error("No quarters available in the merged data.");
@@ -768,60 +766,44 @@ Promise.all([
         return;
     }
 
+    // Set default quarter to 2024Q3
+    const defaultQuarter = "2024Q3";
+    const defaultQuarterIndex = uniqueQuarters.indexOf(defaultQuarter);
+    if (defaultQuarterIndex !== -1) {
+        currentQuarterIndex = defaultQuarterIndex;
+    } else {
+        console.warn(`${defaultQuarter} not found in data; defaulting to the first available quarter.`);
+        currentQuarterIndex = 0; // Fallback to the first quarter if 2024Q3 is not found
+    }
+
     // Extract unique years based on the quarter format "1998Q1"
     uniqueYears = [...new Set(uniqueQuarters.map(q => {
-        if (typeof q === "string") {
-            const match = q.match(/^(\d{4})Q([1-4])$/);
-            if (match) {
-                return match[1]; // Extract year before 'Q'
-            } else {
-                console.warn("Unexpected quarter format:", q);
-                return "";
-            }
-        } else {
-            console.warn("Unexpected quarter format:", q);
-            return "";
-        }
+        const match = q.match(/^(\d{4})Q([1-4])$/);
+        return match ? match[1] : ""; // Extract year before 'Q'
     }))].filter(year => year !== "");
-    console.log("Unique Years:", uniqueYears);
 
-    // Find the index of Q1 for each year
+    // Find the index of Q1 for each year for the timeline
     yearIndices = uniqueQuarters.reduce((acc, q, i) => {
-        if (typeof q === "string") {
-            const match = q.match(/^(\d{4})Q([1-4])$/);
-            if (match) {
-                const quarter = "Q" + match[2];
-                if (quarter === "Q1") acc.push(i);
-            } else {
-                console.warn("Unexpected quarter format:", q);
-            }
-        } else {
-            console.warn("Unexpected quarter format:", q);
-        }
+        if (q.endsWith("Q1")) acc.push(i);
         return acc;
     }, []);
-    console.log("Year Indices:", yearIndices);
-
-    if (uniqueYears.length === 0 || yearIndices.length === 0) {
-        console.error("Failed to extract unique years or year indices.");
-        d3.select("#charts-container").html("<p>Insufficient data to display.</p>");
-        return;
-    }
 
     // Compute the maximum revenue value across all data
     maxRevenueValue = d3.max(mergedData, d => d.revenue);
-    console.log("Max Revenue Value:", maxRevenueValue);
 
     // Initialize the company filter UI and selectedCompanies
     initializeCompanyFilters(mergedData);
 
-    // Create the timeline
+    // Create the timeline and position the triangle on the default quarter
     createTimeline(uniqueQuarters, mergedData, yearIndices, uniqueYears);
+    updateTimelineTriangle(currentQuarterIndex); // Position triangle at the default quarter
 
-    // Initialize the charts with all companies selected
-    updateBubbleChart(uniqueQuarters[0], mergedData);
-    updateBarChart(uniqueQuarters[0], mergedData);
+    // Initialize the charts with the default quarter (2024Q3 or fallback)
+    const selectedQuarter = uniqueQuarters[currentQuarterIndex];
+    updateBubbleChart(selectedQuarter, mergedData);
+    updateBarChart(selectedQuarter, mergedData);
 }).catch(error => {
     console.error("Error fetching or processing data: ", error);
     d3.select("#charts-container").html("<p>Error loading data. Please try again later.</p>");
 });
+
