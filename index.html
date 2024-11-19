@@ -2,70 +2,83 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Interactive Bubble and Racing Bar Chart with Auto-Play and Filters</title>
+    <title>Company Performance Visualization</title>
+
     <!-- Include Plotly.js -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
     <!-- Include D3.js -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <!-- Include Font Awesome for icons (optional) -->
+
+    <!-- Include Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- Include CSS Styles -->
     <style>
         /* General Styles */
         body {
             font-family: 'Open Sans', sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            background-color: #f9f9f9;
             margin: 0;
             padding: 0;
-            background-color: #f9f9f9;
         }
+
         h1 {
-            margin-top: 10px;
+            text-align: center;
+            margin: 20px 0;
             color: #333;
         }
+
         /* Timeline Styles */
         #timeline {
+            position: relative;
             width: 90%;
             max-width: 1200px;
-            margin: 10px auto;
-            text-align: center;
-            position: relative;
+            margin: 0 auto 20px auto;
         }
+
         #play-button {
             position: absolute;
             top: 0;
             right: 0;
-            margin-right: 10px;
-            cursor: pointer;
+            margin: 10px;
             padding: 8px 16px;
             background-color: #eff1f3;
-            color: rgb(14, 14, 14);
+            color: #0e0e0e;
             border: none;
             border-radius: 4px;
             font-size: 16px;
+            cursor: pointer;
             transition: background-color 0.3s;
         }
+
         #play-button:hover {
             background-color: #7f8284;
         }
-        /* Event Description Styles */
-        #event-description {
+
+        /* Tooltip Styles */
+        .tooltip {
+            position: absolute;
             text-align: center;
-            font-size: 16px;
-            color: #555;
-            margin-bottom: 20px;
+            padding: 6px;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            border-radius: 4px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
         }
+
         /* Filter Container Styles */
         #filter-container {
             width: 95%;
             max-width: 1300px;
             margin: 20px auto;
-            text-align: left;
             background-color: #fff;
-            padding: 10px 15px;
+            padding: 15px;
             border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
         #filter-container h3 {
@@ -75,9 +88,10 @@
 
         #filter-controls {
             display: flex;
-            justify-content: space-between;
+            flex-wrap: wrap;
             align-items: center;
             margin-bottom: 10px;
+            gap: 10px;
         }
 
         #filter-controls .buttons {
@@ -85,10 +99,10 @@
             gap: 10px;
         }
 
-        #filter-controls .buttons button {
+        #filter-controls button {
             padding: 6px 12px;
             background-color: #eff1f3;
-            color: rgb(14, 14, 14);
+            color: #0e0e0e;
             border: none;
             border-radius: 4px;
             cursor: pointer;
@@ -96,13 +110,12 @@
             transition: background-color 0.3s;
         }
 
-        #filter-controls .buttons button:hover {
+        #filter-controls button:hover {
             background-color: #7f8284;
         }
 
         #search-bar {
             flex-grow: 1;
-            margin-right: 10px;
         }
 
         #search-bar input {
@@ -114,7 +127,7 @@
         }
 
         #company-filters {
-            max-height: 70px; /* Increased height for better visibility */
+            max-height: 200px;
             overflow-y: auto;
             border: 1px solid #ddd;
             padding: 10px;
@@ -142,39 +155,55 @@
             transform: scale(1.2);
         }
 
+        .highlight {
+            background-color: yellow;
+        }
+
         /* Charts Container Styles */
         #charts-container {
             display: flex;
             flex-wrap: wrap;
             width: 90%;
             max-width: 1400px;
-            justify-content: space-between;
-            margin-top: 20px;
+            margin: 20px auto;
+            gap: 20px;
         }
+
         #bubble-chart, #bar-chart {
             background-color: #fff;
             padding: 10px;
             border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
         #bubble-chart {
-            width: 65%;
-            max-width: 900px;
+            flex: 1 1 60%;
+            min-width: 300px;
             height: 600px;
         }
 
         #bar-chart {
-            width: 30%;
-            max-width: 500px;
+            flex: 1 1 35%;
+            min-width: 250px;
             height: 600px;
+        }
+
+        /* Individual Line Chart Styles */
+        .line-chart {
+            width: 100%;
+            max-width: 1400px;
+            min-height: 500px; 
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
         /* Responsive Design */
         @media (max-width: 1200px) {
             #bubble-chart, #bar-chart {
-                width: 48%;
+                flex: 1 1 100%;
             }
         }
 
@@ -183,83 +212,57 @@
                 flex-direction: column;
                 align-items: center;
             }
+
             #bubble-chart, #bar-chart {
-                width: 100%;
-                max-width: none;
-            }
-            #timeline svg {
-                width: 100%;
+                flex: 1 1 100%;
             }
         }
-
-        /* Loading Spinner Styles */
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border-left-color: #2E86C1;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Tooltip Styles */
-        .tooltip {
-            position: absolute;
-            text-align: center;
-            padding: 6px;
-            font-size: 12px;
-            background: rgba(0, 0, 0, 0.7);
-            color: #fff;
-            border-radius: 4px;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
     </style>
 </head>
 <body>
 
-<h1>Company Performance Visualization</h1>
+    <h1>Company Performance Visualization</h1>
 
-<div id="timeline">
-    <button id="play-button"><i class="fas fa-play"></i> Play</button>
-    <!-- Tooltip for play button -->
-    <div class="tooltip" id="play-tooltip">Click to Play/Pause</div>
-</div>
+    <!-- Timeline and Play Button -->
+    <div id="timeline">
+        <!-- Tooltip for play button -->
+        <div class="tooltip" id="play-tooltip">Click to Play/Pause</div>
+        <button id="play-button"><i class="fas fa-play"></i> Play</button>
+    </div>
 
-<!-- Add the filter container -->
-<div id="filter-container">
-    <h3>Filter Companies</h3>
-    <div id="filter-controls">
-        <div class="buttons">
-            <button id="select-all"><i class="fas fa-check-square"></i> Select All</button>
-            <button id="deselect-all"><i class="fas fa-square"></i> Deselect All</button>
+    <!-- Filter Container -->
+    <div id="filter-container">
+        <h3>Filter Companies</h3>
+        <div id="filter-controls">
+            <div class="buttons">
+                <button id="select-all"><i class="fas fa-check-square"></i> Select All</button>
+                <button id="deselect-all"><i class="fas fa-square"></i> Deselect All</button>
+            </div>
+            <div id="search-bar">
+                <input type="text" id="search-input" placeholder="Search companies...">
+            </div>
         </div>
-        <div id="search-bar">
-            <input type="text" id="search-input" placeholder=" companies...">
+        <div id="company-filters">
+            <!-- Checkboxes will be dynamically populated here -->
         </div>
     </div>
-    <div id="company-filters">
-        <!-- Checkboxes will be dynamically populated here -->
+
+    <!-- Charts Container -->
+    <div id="charts-container">
+        <div id="bubble-chart"></div>
+        <div id="bar-chart"></div>
     </div>
-</div>
 
-<div id="charts-container">
-    <div id="bubble-chart"></div>
-    <div id="bar-chart"></div>
-</div>
+    <!-- Line Charts -->
+    <div id="line-chart-ebitda-margin" class="line-chart"></div>
+    <div id="line-chart-revenue-growth" class="line-chart"></div>
+    <div id="line-chart-revenue" class="line-chart"></div>
 
-<!-- Tooltip Element -->
-<div class="tooltip" id="chart-tooltip"></div>
+    <!-- Tooltip Element -->
+    <div class="tooltip" id="chart-tooltip"></div>
 
-<!-- Link to the external JavaScript file -->
-<script src="script.js"></script>
+    <!-- Link to the external JavaScript file -->
+    <script src="script.js"></script>
 
 </body>
 </html>

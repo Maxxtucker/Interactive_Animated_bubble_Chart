@@ -11,7 +11,6 @@ const sheetNames = {
 // Array of company symbols to be selected by default
 const defaultSelectedCompanies = ["Almosafer", "Cleartrip", "EaseMyTrip", "Ixigo", "MMYT", "Skyscanner", "Wego", "Yatra"];
 
-
 // Company logos mapping
 const companyLogos = {
     "ABNB": "logos/ABNB_logo.png",
@@ -40,7 +39,6 @@ const companyLogos = {
     "FLT": "logos/FlightCentre_logo.png",
     "Almosafer": "logos/Almosafer_logo.png",
     "Webjet OTA": "logos/OTA_logo.png",
-
 
     // Add other company logos here...
 };
@@ -87,7 +85,7 @@ const companyNames = {
     "TRIP": "TripAdvisor",
     "TRVG": "Trivago",
     "EDR": "Edreams",
-    "DESP": "despegar",
+    "DESP": "Despegar",
     "MMYT": "MakeMyTrip",
     "Ixigo": "Ixigo",
     "SEERA": "Seera Group",
@@ -107,7 +105,6 @@ const companyNames = {
 
     // Add more mappings as needed...
 };
-
 
 // Function to clean the color dictionary by trimming keys
 function cleanColorDict(rawDict) {
@@ -241,8 +238,6 @@ function initializeCompanyFilters(sheetData) {
         .map(d => d.company);
 }
 
-
-
 // Function to handle filter changes (only based on checkbox state)
 function handleFilterChange() {
     const checkedBoxes = d3.selectAll("#company-filters input[type='checkbox']")
@@ -261,8 +256,8 @@ function handleFilterChange() {
     const selectedQuarter = uniqueQuarters[currentQuarterIndex];
     updateBubbleChart(selectedQuarter, mergedData);
     updateBarChart(selectedQuarter, mergedData);
+    updateLineCharts(mergedData); // Update line charts
 }
-
 
 // Function to create the interactive timeline using D3.js
 function createTimeline(quarters, mergedData, yearIndices, uniqueYears) {
@@ -444,7 +439,6 @@ function updateBubbleChart(quarter, sheetData) {
     Plotly.react('bubble-chart', bubbleData, layout, {responsive: true});
 }
 
-
 function updateBarChart(quarter, sheetData) {
     const fixedBarHeight = 30; // Fixed height for each bar
     const barPadding = 10; // Padding between bars
@@ -602,7 +596,91 @@ function updateBarChart(quarter, sheetData) {
         });
 }
 
-
+// Function to update the line charts
+function updateLineCharts(mergedData) {
+    // Prepare the data for the line charts
+    const quarters = [...new Set(mergedData.map(d => d.quarter))].sort();
+    
+    // For each selected company, create traces for each metric
+    const ebitdaMarginTraces = [];
+    const revenueGrowthTraces = [];
+    const revenueTraces = [];
+    
+    selectedCompanies.forEach(company => {
+        const companyData = mergedData.filter(d => d.company === company);
+        
+        // Ensure data is sorted by quarter
+        companyData.sort((a, b) => {
+            return quarters.indexOf(a.quarter) - quarters.indexOf(b.quarter);
+        });
+        
+        // Get x (quarters) and y (values)
+        const x = companyData.map(d => d.quarter);
+        const yEbitdaMargin = companyData.map(d => d.ebitdaMargin);
+        const yRevenueGrowth = companyData.map(d => d.revenueGrowth);
+        const yRevenue = companyData.map(d => d.revenue);
+        
+        // Create traces for EBITDA Margin
+        ebitdaMarginTraces.push({
+            x: x,
+            y: yEbitdaMargin,
+            mode: 'lines+markers',
+            name: companyNames[company] || company,
+            line: { color: color_dict[company] || 'gray' },
+            hovertemplate: `%{x}<br>${companyNames[company] || company}<br>EBITDA Margin: %{y}%<extra></extra>`
+        });
+        
+        // Create traces for Revenue Growth
+        revenueGrowthTraces.push({
+            x: x,
+            y: yRevenueGrowth,
+            mode: 'lines+markers',
+            name: companyNames[company] || company,
+            line: { color: color_dict[company] || 'gray' },
+            hovertemplate: `%{x}<br>${companyNames[company] || company}<br>Revenue Growth: %{y}%<extra></extra>`
+        });
+        
+        // Create traces for Revenue
+        revenueTraces.push({
+            x: x,
+            y: yRevenue,
+            mode: 'lines+markers',
+            name: companyNames[company] || company,
+            line: { color: color_dict[company] || 'gray' },
+            hovertemplate: `%{x}<br>${companyNames[company] || company}<br>Revenue: $%{y:,}M<extra></extra>`
+        });
+    });
+    
+    // Define layouts for each chart
+    const layoutEbitdaMargin = {
+        title: 'EBITDA Margin Over Time',
+        xaxis: { title: 'Quarter', tickangle: -45 },
+        yaxis: { title: 'EBITDA Margin (%)' },
+        hovermode: 'x unified',
+        margin: { t: 50, l: 80, r: 50, b: 100 }
+    };
+    
+    const layoutRevenueGrowth = {
+        title: 'Revenue Growth Over Time',
+        xaxis: { title: 'Quarter', tickangle: -45 },
+        yaxis: { title: 'Revenue Growth YoY (%)' },
+        hovermode: 'x unified',
+        margin: { t: 50, l: 80, r: 50, b: 100 }
+    };
+    
+    const layoutRevenue = {
+        title: 'Revenue Over Time',
+        xaxis: { title: 'Quarter', tickangle: -45 },
+        yaxis: { title: 'Revenue (in Millions)' },
+        hovermode: 'x unified',
+        margin: { t: 50, l: 80, r: 50, b: 100 }
+    };
+    
+    // Plot the charts using Plotly
+    Plotly.react('line-chart-ebitda-margin', ebitdaMarginTraces, layoutEbitdaMargin, { responsive: true });
+    Plotly.react('line-chart-revenue-growth', revenueGrowthTraces, layoutRevenueGrowth, { responsive: true });
+    Plotly.react('line-chart-revenue', revenueTraces, layoutRevenue, { responsive: true });
+}
 
 // Function to handle the Play/Pause button
 function handlePlayPause() {
@@ -703,8 +781,6 @@ d3.select("#search-input").on("input", debounce(function() {
         });
 }, 300)); // 300ms delay
 
-
-
 // Select All and Deselect All Button Functions
 d3.select("#select-all").on("click", () => {
     d3.selectAll("#company-filters input[type='checkbox']")
@@ -717,6 +793,7 @@ d3.select("#select-all").on("click", () => {
         });
     updateBubbleChart(uniqueQuarters[currentQuarterIndex], mergedData);
     updateBarChart(uniqueQuarters[currentQuarterIndex], mergedData);
+    updateLineCharts(mergedData); // Update line charts
 });
 
 d3.select("#deselect-all").on("click", () => {
@@ -725,6 +802,7 @@ d3.select("#deselect-all").on("click", () => {
     selectedCompanies = [];
     updateBubbleChart(uniqueQuarters[currentQuarterIndex], mergedData);
     updateBarChart(uniqueQuarters[currentQuarterIndex], mergedData);
+    updateLineCharts(mergedData); // Update line charts
 });
 
 // Initialize Tooltip for Play Button
@@ -802,8 +880,9 @@ Promise.all([
     const selectedQuarter = uniqueQuarters[currentQuarterIndex];
     updateBubbleChart(selectedQuarter, mergedData);
     updateBarChart(selectedQuarter, mergedData);
+    updateLineCharts(mergedData); // Initialize line charts
+
 }).catch(error => {
     console.error("Error fetching or processing data: ", error);
     d3.select("#charts-container").html("<p>Error loading data. Please try again later.</p>");
 });
-
