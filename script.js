@@ -233,9 +233,7 @@ function initializeCompanyFilters(sheetData) {
     });
 
     // Initialize selectedCompanies based on defaultSelectedCompanies
-    selectedCompanies = sheetData
-        .filter(d => defaultSelectedCompanies.includes(d.company))
-        .map(d => d.company);
+    selectedCompanies = defaultSelectedCompanies.slice(); // Use a copy of defaultSelectedCompanies
 }
 
 // Function to handle filter changes (only based on checkbox state)
@@ -596,10 +594,16 @@ function updateBarChart(quarter, sheetData) {
         });
 }
 
-// Function to update the line charts
 function updateLineCharts(mergedData) {
     // Prepare the data for the line charts
-    const quarters = [...new Set(mergedData.map(d => d.quarter))].sort();
+    const quarters = [...new Set(mergedData.map(d => d.quarter))];
+
+    // Sort the quarters in chronological order
+    quarters.sort((a, b) => {
+        const [aYear, aQuarter] = a.match(/(\d{4})Q([1-4])/).slice(1,3).map(Number);
+        const [bYear, bQuarter] = b.match(/(\d{4})Q([1-4])/).slice(1,3).map(Number);
+        return (aYear - bYear) || (aQuarter - bQuarter);
+    });
     
     // For each selected company, create traces for each metric
     const ebitdaMarginTraces = [];
@@ -611,7 +615,9 @@ function updateLineCharts(mergedData) {
         
         // Ensure data is sorted by quarter
         companyData.sort((a, b) => {
-            return quarters.indexOf(a.quarter) - quarters.indexOf(b.quarter);
+            const aIndex = quarters.indexOf(a.quarter);
+            const bIndex = quarters.indexOf(b.quarter);
+            return aIndex - bIndex;
         });
         
         // Get x (quarters) and y (values)
@@ -651,10 +657,15 @@ function updateLineCharts(mergedData) {
         });
     });
     
-    // Define layouts for each chart
+    // Define layouts for each chart with categoryorder and categoryarray
     const layoutEbitdaMargin = {
         title: 'EBITDA Margin Over Time',
-        xaxis: { title: 'Quarter', tickangle: -45 },
+        xaxis: { 
+            title: 'Quarter', 
+            tickangle: -45,
+            categoryorder: 'array',
+            categoryarray: quarters
+        },
         yaxis: { title: 'EBITDA Margin (%)' },
         hovermode: 'x unified',
         margin: { t: 50, l: 80, r: 50, b: 100 }
@@ -662,7 +673,12 @@ function updateLineCharts(mergedData) {
     
     const layoutRevenueGrowth = {
         title: 'Revenue Growth Over Time',
-        xaxis: { title: 'Quarter', tickangle: -45 },
+        xaxis: { 
+            title: 'Quarter', 
+            tickangle: -45,
+            categoryorder: 'array',
+            categoryarray: quarters
+        },
         yaxis: { title: 'Revenue Growth YoY (%)' },
         hovermode: 'x unified',
         margin: { t: 50, l: 80, r: 50, b: 100 }
@@ -670,7 +686,12 @@ function updateLineCharts(mergedData) {
     
     const layoutRevenue = {
         title: 'Revenue Over Time',
-        xaxis: { title: 'Quarter', tickangle: -45 },
+        xaxis: { 
+            title: 'Quarter', 
+            tickangle: -45,
+            categoryorder: 'array',
+            categoryarray: quarters
+        },
         yaxis: { title: 'Revenue (in Millions)' },
         hovermode: 'x unified',
         margin: { t: 50, l: 80, r: 50, b: 100 }
@@ -681,7 +702,6 @@ function updateLineCharts(mergedData) {
     Plotly.react('line-chart-revenue-growth', revenueGrowthTraces, layoutRevenueGrowth, { responsive: true });
     Plotly.react('line-chart-revenue', revenueTraces, layoutRevenue, { responsive: true });
 }
-
 // Function to handle the Play/Pause button
 function handlePlayPause() {
     const playButton = document.getElementById('play-button');
