@@ -631,9 +631,9 @@ function updateLineCharts(mergedData) {
             x: x,
             y: yEbitdaMargin,
             mode: 'lines+markers',
-            name: companyNames[company] || company,
+            name: company, // Use ticker symbol instead of full company name
             line: { color: color_dict[company] || 'gray' },
-            hovertemplate: `%{x}<br>${companyNames[company] || company}<br>EBITDA Margin: %{y}%<extra></extra>`
+            hovertemplate: `%{x}<br>${company}<br>EBITDA Margin: %{y}%<extra></extra>` // Use ticker symbol
         });
         
         // Create traces for Revenue Growth
@@ -641,9 +641,9 @@ function updateLineCharts(mergedData) {
             x: x,
             y: yRevenueGrowth,
             mode: 'lines+markers',
-            name: companyNames[company] || company,
+            name: company, // Use ticker symbol
             line: { color: color_dict[company] || 'gray' },
-            hovertemplate: `%{x}<br>${companyNames[company] || company}<br>Revenue Growth: %{y}%<extra></extra>`
+            hovertemplate: `%{x}<br>${company}<br>Revenue Growth: %{y}%<extra></extra>` // Use ticker symbol
         });
         
         // Create traces for Revenue
@@ -651,9 +651,9 @@ function updateLineCharts(mergedData) {
             x: x,
             y: yRevenue,
             mode: 'lines+markers',
-            name: companyNames[company] || company,
+            name: company, // Use ticker symbol
             line: { color: color_dict[company] || 'gray' },
-            hovertemplate: `%{x}<br>${companyNames[company] || company}<br>Revenue: $%{y:,}M<extra></extra>`
+            hovertemplate: `%{x}<br>${company}<br>Revenue: $%{y:,}M<extra></extra>` // Use ticker symbol
         });
     });
     
