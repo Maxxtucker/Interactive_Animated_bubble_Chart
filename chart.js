@@ -203,137 +203,8 @@
 
         const g = svg.append("g").attr("transform", `translate(${margin.left}, ${margin.top})`);
 
-        // Compute min and max values for the scales
-        const ebitdaMargins = mergedData.map(d => d.ebitdaMargin);
-        const revenueGrowths = mergedData.map(d => d.revenueGrowth);
-
-        if (ebitdaMargins.length === 0 || revenueGrowths.length === 0) {
-            console.error('No valid data available for visualization.');
-            return;
-        }
-
-        const xMin = d3.min(ebitdaMargins);
-        const xMax = d3.max(ebitdaMargins);
-        const yMin = d3.min(revenueGrowths);
-        const yMax = d3.max(revenueGrowths);
-
-        // Add padding to the domains
-        const xPadding = (xMax - xMin) * 0.1 || 0.1; // Default padding if range is 0
-        const yPadding = (yMax - yMin) * 0.1 || 0.1;
-
-        // Adjust the domains to include 0% for x and y axes
-        const xDomain = [
-            Math.min(xMin - xPadding, 0),
-            Math.max(xMax + xPadding, 0)
-        ];
-
-        const yDomain = [
-            Math.min(yMin - yPadding, 0),
-            Math.max(yMax + yPadding, 0)
-        ];
-
-        const xScale = d3.scaleLinear()
-            .domain(xDomain)
-            .range([0, width]);
-
-        const yScale = d3.scaleLinear()
-            .domain(yDomain)
-            .range([height, 0]);
-
-        const xAxis = d3.axisBottom(xScale)
-            .tickFormat(d3.format(".0%"));
-
-        const yAxis = d3.axisLeft(yScale)
-            .tickFormat(d3.format(".0%"));
-
-        // Draw x-axis
-        g.append("g")
-            .attr("transform", `translate(0, ${height})`)
-            .call(xAxis)
-            .selectAll(".tick text")
-            .style("font-family", "Nunito");
-
-        // Draw y-axis
-        g.append("g")
-            .call(yAxis)
-            .selectAll(".tick text")
-            .style("font-family", "Nunito");
-
-        // Add x-axis label
-        g.append("text")
-            .attr("class", "x label")
-            .attr("text-anchor", "middle")
-            .attr("x", width / 2)
-            .attr("y", height + 40)
-            .text("EBITDA Margin")
-            .style("font-family", "Nunito");
-
-        // Add y-axis label
-        g.append("text")
-            .attr("class", "y label")
-            .attr("text-anchor", "middle")
-            .attr("transform", `rotate(-90)`)
-            .attr("y", -50)
-            .attr("x", -height / 2)
-            .attr("dy", "1em")
-            .text("Revenue Growth YoY")
-            .style("font-family", "Nunito");
-
-        // Add zero lines for x and y axes at 0%
-        // Horizontal line at y = 0%
-        if (yScale(0) >= 0 && yScale(0) <= height) {
-            g.append("line")
-                .attr("class", "zero-line")
-                .attr("x1", 0)
-                .attr("y1", yScale(0))
-                .attr("x2", width)
-                .attr("y2", yScale(0))
-                .attr("stroke", "green")
-                .attr("stroke-width", 1)
-                .attr("stroke-dasharray", "4,2");
-        }
-
-        // Vertical line at x = 0%
-        if (xScale(0) >= 0 && xScale(0) <= width) {
-            g.append("line")
-                .attr("class", "zero-line")
-                .attr("x1", xScale(0))
-                .attr("y1", 0)
-                .attr("x2", xScale(0))
-                .attr("y2", height)
-                .attr("stroke", "green")
-                .attr("stroke-width", 1)
-                .attr("stroke-dasharray", "4,2");
-        }
-
-        // Plot data points (dots)
-        const dots = g.selectAll(".dot")
-            .data(mergedData)
-            .enter()
-            .append("circle")
-            .attr("class", "dot")
-            .attr("cx", d => xScale(d.ebitdaMargin))
-            .attr("cy", d => yScale(d.revenueGrowth))
-            .attr("r", 5)
-            .attr("fill", d => colorDict[d.company] || '#000000')
-            .on("click", function(event, d) {
-                // Remove the data point (circle)
-                d3.select(this).remove();
-
-                // Remove the associated company logo
-                g.selectAll(".logo")
-                    .filter(function(logoData) {
-                        return logoData.company === d.company;
-                    })
-                    .remove();
-
-                // Remove the quarter label associated with the data point
-                g.selectAll(".quarter-label")
-                    .filter(function(labelData) {
-                        return labelData.company === d.company;
-                    })
-                    .remove();
-            });
+        // Declare scales and axes outside to make them accessible for updates
+        let xScale, yScale, xAxis, yAxis;
 
         // **Define the drag behavior for quarter labels**
         const labelDragHandler = d3.drag()
@@ -361,28 +232,6 @@
         function labelDragEnded(event, d) {
             d3.select(this).classed("active", false);
         }
-
-        // Add quarter indicators beside the bubbles
-        g.selectAll(".quarter-label")
-            .data(mergedData)
-            .enter()
-            .append("text")
-            .attr("class", "quarter-label")
-            .attr("x", d => xScale(d.ebitdaMargin) + 8) // Adjust position as needed
-            .attr("y", d => yScale(d.revenueGrowth) + 4) // Adjust position as needed
-            .text('Q3') // Since you're filtering for '2024 Q3'
-            .style("font-size", "12px")
-            .style("font-family", "Nunito")
-            .style("fill", "black")
-            .call(labelDragHandler); // **Apply drag behavior to labels**
-
-        // Filter data for adding logos
-        const dataWithLogos = mergedData.filter(d => {
-            // Add logo if:
-            // - The data point is for Q3
-            // - Or the company does not have both quarters
-            return d.quarter.includes('q3') || !d.hasBothQuarters;
-        });
 
         // **Define the drag behavior for logos**
         const dragHandler = d3.drag()
@@ -412,18 +261,211 @@
             d3.select(this).classed("active", false);
         }
 
-        // **Add company logos above the data points with drag behavior**
-        g.selectAll(".logo")
-            .data(dataWithLogos)
-            .enter()
-            .append("image")
-            .attr("class", "logo")
-            .attr("xlink:href", d => logoDict[d.company] || '')
-            .attr("x", d => xScale(d.ebitdaMargin) - 40) // Center the logo horizontally
-            .attr("y", d => yScale(d.revenueGrowth) - 62) // Position the logo above the dot
-            .attr("width", 80)
-            .attr("height", 80)
-            .call(dragHandler); // Apply drag behavior to logos
+        // **Function to update the chart**
+        function updateChart() {
+            // Compute min and max values for the scales
+            const ebitdaMargins = mergedData.map(d => d.ebitdaMargin);
+            const revenueGrowths = mergedData.map(d => d.revenueGrowth);
+
+            if (ebitdaMargins.length === 0 || revenueGrowths.length === 0) {
+                console.error('No valid data available for visualization.');
+                // Clear the chart
+                g.selectAll("*").remove();
+                return;
+            }
+
+            const xMin = d3.min(ebitdaMargins);
+            const xMax = d3.max(ebitdaMargins);
+            const yMin = d3.min(revenueGrowths);
+            const yMax = d3.max(revenueGrowths);
+
+            // Add padding to the domains
+            const xPadding = (xMax - xMin) * 0.1 || 0.1; // Default padding if range is 0
+            const yPadding = (yMax - yMin) * 0.1 || 0.1;
+
+            // Adjust the domains to include 0% for x and y axes
+            const xDomain = [
+                Math.min(xMin - xPadding, 0),
+                Math.max(xMax + xPadding, 0)
+            ];
+
+            const yDomain = [
+                Math.min(yMin - yPadding, 0),
+                Math.max(yMax + yPadding, 0)
+            ];
+
+            // Update scales
+            xScale = d3.scaleLinear()
+                .domain(xDomain)
+                .range([0, width]);
+
+            yScale = d3.scaleLinear()
+                .domain(yDomain)
+                .range([height, 0]);
+
+            // Update axes
+            xAxis = d3.axisBottom(xScale)
+                .tickFormat(d3.format(".0%"));
+
+            yAxis = d3.axisLeft(yScale)
+                .tickFormat(d3.format(".0%"));
+
+            // Remove existing axes and zero lines
+            g.selectAll(".x-axis").remove();
+            g.selectAll(".y-axis").remove();
+            g.selectAll(".zero-line").remove();
+
+            // Draw x-axis
+            g.append("g")
+                .attr("class", "x-axis")
+                .attr("transform", `translate(0, ${height})`)
+                .call(xAxis)
+                .selectAll(".tick text")
+                .style("font-family", "Open Sans")
+                .style("font-size", 14);
+
+            // Draw y-axis
+            g.append("g")
+                .attr("class", "y-axis")
+                .call(yAxis)
+                .selectAll(".tick text")
+                .style("font-family", "Open Sans")
+                .style("font-size", 14);
+
+            // **Add x-axis label**
+            g.selectAll(".x-label").remove(); // Remove existing label
+            g.append("text")
+                .attr("class", "x-label")
+                .attr("text-anchor", "middle")
+                .attr("x", width / 2)
+                .attr("y", height + 40)
+                .text("EBITDA Margin")
+                .style("font-family", "Open Sans")
+                .style("font-size", 20);
+
+            // **Add y-axis label**
+            g.selectAll(".y-label").remove(); // Remove existing label
+            g.append("text")
+                .attr("class", "y-label")
+                .attr("text-anchor", "middle")
+                .attr("transform", `rotate(-90)`)
+                .attr("y", -65)
+                .attr("x", -height / 2)
+                .attr("dy", "1em")
+                .text("Revenue Growth YoY")
+                .style("font-family", "Open Sans")
+                .style("font-size", 20);
+
+            // Add zero lines for x and y axes at 0%
+            // Horizontal line at y = 0%
+            if (yScale(0) >= 0 && yScale(0) <= height) {
+                g.append("line")
+                    .attr("class", "zero-line")
+                    .attr("x1", 0)
+                    .attr("y1", yScale(0))
+                    .attr("x2", width)
+                    .attr("y2", yScale(0))
+                    .attr("stroke", "green")
+                    .attr("stroke-width", 1)
+                    .attr("stroke-dasharray", "4,2");
+            }
+
+            // Vertical line at x = 0%
+            if (xScale(0) >= 0 && xScale(0) <= width) {
+                g.append("line")
+                    .attr("class", "zero-line")
+                    .attr("x1", xScale(0))
+                    .attr("y1", 0)
+                    .attr("x2", xScale(0))
+                    .attr("y2", height)
+                    .attr("stroke", "green")
+                    .attr("stroke-width", 1)
+                    .attr("stroke-dasharray", "4,2");
+            }
+
+            // Update dots
+            const dots = g.selectAll(".dot")
+                .data(mergedData, d => d.company);
+
+            dots.enter()
+                .append("circle")
+                .attr("class", "dot")
+                .attr("r", 5)
+                .attr("fill", d => colorDict[d.company] || '#000000')
+                .on("click", function(event, d) {
+                    // Remove the data point from mergedData
+                    mergedData = mergedData.filter(item => item.company !== d.company);
+
+                    // Remove associated elements
+                    g.selectAll(".logo")
+                        .filter(logoData => logoData.company === d.company)
+                        .remove();
+
+                    g.selectAll(".quarter-label")
+                        .filter(labelData => labelData.company === d.company)
+                        .remove();
+
+                    // Update the chart
+                    updateChart();
+                })
+                .merge(dots)
+                .transition()
+                .duration(500)
+                .attr("cx", d => xScale(d.ebitdaMargin))
+                .attr("cy", d => yScale(d.revenueGrowth));
+
+            dots.exit().remove();
+
+            // Update quarter labels
+            const labels = g.selectAll(".quarter-label")
+                .data(mergedData, d => d.company);
+
+            labels.enter()
+                .append("text")
+                .attr("class", "quarter-label")
+                .text('Q3') // Since you're filtering for '2024 Q3'
+                .style("font-size", "12px")
+                .style("font-family", "Open Sans")
+                .style("fill", "black")
+                .call(labelDragHandler) // Apply drag behavior to labels
+                .merge(labels)
+                .transition()
+                .duration(500)
+                .attr("x", d => xScale(d.ebitdaMargin) + 8) // Adjust position as needed
+                .attr("y", d => yScale(d.revenueGrowth) + 4); // Adjust position as needed
+
+            labels.exit().remove();
+
+            // Update company logos
+            const dataWithLogos = mergedData.filter(d => {
+                // Add logo if:
+                // - The data point is for Q3
+                // - Or the company does not have both quarters
+                return d.quarter.includes('q3') || !d.hasBothQuarters;
+            });
+
+            const logos = g.selectAll(".logo")
+                .data(dataWithLogos, d => d.company);
+
+            logos.enter()
+                .append("image")
+                .attr("class", "logo")
+                .attr("xlink:href", d => logoDict[d.company] || '')
+                .attr("width", 80)
+                .attr("height", 80)
+                .call(dragHandler) // Apply drag behavior to logos
+                .merge(logos)
+                .transition()
+                .duration(500)
+                .attr("x", d => xScale(d.ebitdaMargin) - 40) // Center the logo horizontally
+                .attr("y", d => yScale(d.revenueGrowth) - 62); // Position the logo above the dot
+
+            logos.exit().remove();
+
+        }
+
+        // **Initial Chart Rendering**
+        updateChart();
 
     });
 })();
