@@ -105,8 +105,8 @@
             values.slice(1).forEach((value, i) => {
                 if (value && companies[i]) {
                     const company = companies[i].trim().replace(/['"]+/g, '').toLowerCase();
-                    // Only include data for '2024 Q3'
-                    if (quarter !== '2024 Q3') return;
+                    // Include data for '2024 Q2' and '2024 Q3'
+                    if (quarter !== '2024 Q3' && quarter !== '2024 Q2') return;
                     const cleanedValue = value.trim().replace(/['"$%]+/g, '');
                     const parsedValue = parseFloat(cleanedValue);
                     if (isNaN(parsedValue)) return;
@@ -383,18 +383,22 @@
                     .attr("stroke-dasharray", "4,2");
             }
 
-            // Update dots
-            const dots = g.selectAll(".dot")
-                .data(mergedData, d => d.company);
+            // **Separate data for Q2 and Q3**
+            const dataQ3 = mergedData.filter(d => d.quarter === '2024 q3');
+            const dataQ2 = mergedData.filter(d => d.quarter === '2024 q2');
 
-            dots.enter()
+            // **Update dots for Q3**
+            const dotsQ3 = g.selectAll(".dot.q3")
+                .data(dataQ3, d => d.company);
+
+            dotsQ3.enter()
                 .append("circle")
-                .attr("class", "dot")
+                .attr("class", "dot q3")
                 .attr("r", 5)
                 .attr("fill", d => colorDict[d.company] || '#000000')
                 .on("click", function(event, d) {
                     // Remove the data point from mergedData
-                    mergedData = mergedData.filter(item => item.company !== d.company);
+                    mergedData = mergedData.filter(item => !(item.company === d.company && item.quarter === d.quarter));
 
                     // Remove associated elements
                     g.selectAll(".logo")
@@ -402,28 +406,58 @@
                         .remove();
 
                     g.selectAll(".quarter-label")
-                        .filter(labelData => labelData.company === d.company)
+                        .filter(labelData => labelData.company === d.company && labelData.quarter === d.quarter)
                         .remove();
 
                     // Update the chart
                     updateChart();
                 })
-                .merge(dots)
+                .merge(dotsQ3)
                 .transition()
                 .duration(500)
                 .attr("cx", d => xScale(d.ebitdaMargin))
                 .attr("cy", d => yScale(d.revenueGrowth));
 
-            dots.exit().remove();
+            dotsQ3.exit().remove();
 
-            // Update quarter labels
+            // **Update crosses for Q2 (without logos)**
+            const symbolCross = d3.symbol().type(d3.symbolCross).size(100);
+
+            const crossesQ2 = g.selectAll(".cross.q2")
+                .data(dataQ2, d => d.company);
+
+            crossesQ2.enter()
+                .append("path")
+                .attr("class", "cross q2")
+                .attr("d", symbolCross)
+                .attr("fill", d => colorDict[d.company] || '#000000')
+                .on("click", function(event, d) {
+                    // Remove the data point from mergedData
+                    mergedData = mergedData.filter(item => !(item.company === d.company && item.quarter === d.quarter));
+
+                    // Remove associated elements
+                    g.selectAll(".quarter-label")
+                        .filter(labelData => labelData.company === d.company && labelData.quarter === d.quarter)
+                        .remove();
+
+                    // Update the chart
+                    updateChart();
+                })
+                .merge(crossesQ2)
+                .transition()
+                .duration(500)
+                .attr("transform", d => `translate(${xScale(d.ebitdaMargin)},${yScale(d.revenueGrowth)})`);
+
+            crossesQ2.exit().remove();
+
+            // **Update quarter labels (show 'Q2' and 'Q3' instead of '2024 Q2', '2024 Q3')**
             const labels = g.selectAll(".quarter-label")
-                .data(mergedData, d => d.company);
+                .data(mergedData, d => d.company + d.quarter);
 
             labels.enter()
                 .append("text")
                 .attr("class", "quarter-label")
-                .text('Q3') // Since you're filtering for '2024 Q3'
+                .text(d => d.quarter.toUpperCase().replace('2024 ', '')) // Remove '2024 '
                 .style("font-size", "12px")
                 .style("font-family", "Open Sans")
                 .style("fill", "black")
@@ -436,13 +470,8 @@
 
             labels.exit().remove();
 
-            // Update company logos
-            const dataWithLogos = mergedData.filter(d => {
-                // Add logo if:
-                // - The data point is for Q3
-                // - Or the company does not have both quarters
-                return d.quarter.includes('q3') || !d.hasBothQuarters;
-            });
+            // **Update company logos for Q3 data only**
+            const dataWithLogos = dataQ3; // Only Q3 data
 
             const logos = g.selectAll(".logo")
                 .data(dataWithLogos, d => d.company);
