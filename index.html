@@ -188,6 +188,16 @@
             height: 600px;
         }
 
+
+        .additional-charts {
+            display: flex;
+            justify-content: center; /* Centers content horizontally */
+            align-items: center;    /* Centers content vertically */
+            width: 100%;            /* Optional: Ensure the container spans full width */
+            height: auto;  
+            margin: 20px;         /* Optional: Adjust the height as needed */
+        }
+
         /* Individual Line Chart Styles */
         .line-chart {
             width: 100%;
@@ -223,6 +233,7 @@
 
     <h1>Company Performance Visualization</h1>
 
+    <div id="additional-chart" class="additional-charts"></div>
     <!-- Timeline and Play Button -->
     <div id="timeline">
         <!-- Tooltip for play button -->
@@ -255,8 +266,9 @@
 
     <!-- Line Charts -->
     <div id="line-chart-revenue" class="line-chart"></div>
-    <div id="line-chart-ebitda-margin" class="line-chart"></div>
     <div id="line-chart-revenue-growth" class="line-chart"></div>
+    <div id="line-chart-ebitda-margin" class="line-chart"></div>
+    
     
 
     <!-- Tooltip Element -->
@@ -264,6 +276,7 @@
 
     <!-- Link to the external JavaScript file -->
     <script src="script.js"></script>
+    <script src="chart.js"></script>
 
 </body>
 </html>
