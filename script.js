@@ -441,7 +441,7 @@ function updateBarChart(quarter, sheetData) {
     const fixedBarHeight = 30; // Fixed height for each bar
     const barPadding = 10; // Padding between bars
     const maxChartHeight = 600; // Optional: Maximum height before enabling scroll
-    const margin = { top: 30, right: 20, bottom: 50, left: 100 };
+    const margin = { top: 30, right: 50, bottom: 50, left: 50 };
 
     const quarterData = sheetData
         .filter(d => d.quarter === quarter && selectedCompanies.includes(d.company))
